@@ -28,16 +28,30 @@ namespace StockTestAPI.Services
 #pragma warning restore CS8601 // Possible null reference assignment.
         }
 
+
+
         public async Task<Dictionary<string, Dictionary<int, decimal>>> GetStockPerfomanceByDay(string stockId, int lastDaysCount)
         {
-            var stockHistoryData = await _stockApiClientService.GetStockPriceByDate(stockId, lastDaysCount);
-            var mainStockHistoryData = await _stockApiClientService.GetStockPriceByDate(_mainStockId, lastDaysCount);
 
-            await _stockHistoryProxyRepository.AddStockHistory(stockId, stockHistoryData);
-            await _stockHistoryProxyRepository.AddStockHistory(_mainStockId, mainStockHistoryData);
+            var stockHistoryData = await _stockHistoryProxyRepository.GetStockByDates(stockId, lastDaysCount);
+            var existingMainHistoryData = await _stockHistoryProxyRepository.GetStockByDates(_mainStockId, lastDaysCount);
+
+            if (stockHistoryData.Count != lastDaysCount)
+            {
+                stockHistoryData = await _stockApiClientService.GetStockPriceByDate(stockId, lastDaysCount);
+                await _stockHistoryProxyRepository.AddStockHistory(stockId, stockHistoryData);
+
+            }
+
+            if (existingMainHistoryData.Count != lastDaysCount)
+            {
+                existingMainHistoryData = await _stockApiClientService.GetStockPriceByDate(_mainStockId, lastDaysCount);
+                await _stockHistoryProxyRepository.AddStockHistory(_mainStockId, existingMainHistoryData);
+
+            }
 
             var targetStockPerfomance = _stockReportService.GetCalculatedStockPerfomance(stockHistoryData);
-            var mainStockPerfomance = _stockReportService.GetCalculatedStockPerfomance(mainStockHistoryData);
+            var mainStockPerfomance = _stockReportService.GetCalculatedStockPerfomance(existingMainHistoryData);
 
             var result = new Dictionary<string, Dictionary<int, decimal>>
             {
@@ -49,7 +63,7 @@ namespace StockTestAPI.Services
         }
         public async Task<List<StockPerfomanceDto>> GetStockPerfomanceByHour(string stockId, int lastDaysCount)
         {
-            var stockHistoryData = await _stockApiClientService.GetStockPriceByHour(stockId,  lastDaysCount);
+            var stockHistoryData = await _stockApiClientService.GetStockPriceByHour(stockId, lastDaysCount);
             var mainStockHistoryData = await _stockApiClientService.GetStockPriceByHour(_mainStockId, lastDaysCount);
 
             var targetStock = new StockPerfomanceDto

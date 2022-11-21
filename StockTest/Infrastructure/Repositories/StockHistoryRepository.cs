@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 using StockData.Objects;
 using StockTestAPI.Domain;
+using StockTestAPI.DTO;
 using StockTestAPI.Infrastructure.Repositories.Interfaces;
 
 namespace StockTestAPI.Infrastructure.Repositories
@@ -44,6 +45,20 @@ namespace StockTestAPI.Infrastructure.Repositories
                      .Where(x => x.StockId == stockId && dates.Contains(x.DateTime))
                      .Select(x => x.DateTime).ToListAsync();
             return existingsDates;
+        }
+
+        public async Task<List<StockParams>> GetStockByDates(string stockId, List<DateTime> dates)
+        {
+            var result = await _stockDbContext.StockHistory.Where(x => x.StockId == stockId && dates.Contains(x.DateTime))
+                .Select(x => new StockParams
+                {
+                    StockId = x.StockId,
+                    DateTime = x.DateTime,
+                    ClosePrice = x.ClosePrice,
+                    OpenPrice = x.OpenPrice,
+
+                }).ToListAsync();
+            return result;
         }
     }
 }

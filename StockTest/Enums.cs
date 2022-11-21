@@ -6,7 +6,8 @@
         {
             StockByDateRangeByDate = 1,
             StockByDateRangeByHour = 2,
-            StockByDateRangeSavedToDB = 3
+            StockByDateRangeSavedToDB = 3,
+            StockByDateToDB = 4
         }
     }
 }

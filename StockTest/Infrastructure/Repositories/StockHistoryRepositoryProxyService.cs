@@ -16,7 +16,7 @@ namespace StockTestAPI.Infrastructure.Repositories
         {
             _cacheHelperService = cacheHelperService;
             _stockHistoryRepository = stockHistoryRepository;
-            _memoryCache = memoryCache;     
+            _memoryCache = memoryCache;
         }
 
         private string GetStockHistoryKey(string stockId, DateTime date)
@@ -28,14 +28,14 @@ namespace StockTestAPI.Infrastructure.Repositories
         {
             var enumType = EnumCacheType.StockByDateRangeSavedToDB;
             var rowsToAdd = new List<StockParams>();
-         
+
             foreach (var stH in stockHistoryData)
             {
                 var key = _cacheHelperService.GetCacheKey(enumType, GetStockHistoryKey(stockId, stH.DateTime));
                 if (!_memoryCache.TryGetValue(key, out bool exist))
                 {
                     rowsToAdd.Add(stH);
-                   
+
                 }
             }
             if (rowsToAdd.Count == 0)
@@ -56,7 +56,7 @@ namespace StockTestAPI.Infrastructure.Repositories
                     newHistoryData.Add(new StockHistory(stockId, r.DateTime, r.OpenPrice, r.ClosePrice));
                 }
             }
-            
+
             if (newHistoryData.Count == 0)
             {
                 return 0;
@@ -68,8 +68,57 @@ namespace StockTestAPI.Infrastructure.Repositories
                 var key = _cacheHelperService.GetCacheKey(enumType, GetStockHistoryKey(stockId, nr.DateTime));
                 _memoryCache.Set(key, true, new TimeSpan(24, 0, 0));
             }
-           
+
             return newHistoryData.Count;
+        }
+
+        public async ValueTask<List<StockParams>> GetStockByDates(string stockId, int lastDaysCount)
+        {
+            var result = new List<StockParams>();
+
+            var dates = new List<DateTime>();
+            while (lastDaysCount > 0)
+            {
+                dates.Add(DateTime.UtcNow.Date.AddDays(-lastDaysCount));
+                lastDaysCount--;
+            }
+
+            var rowsToCheckExistInDB = new List<DateTime>();
+
+            foreach (var date in dates)
+            {
+                var key = _cacheHelperService.GetCacheKey(EnumCacheType.StockByDateToDB, $"{stockId}_{date.ToString("yyyy-MM-dd")}");
+
+                if (!_memoryCache.TryGetValue(key, out StockParams stockParams))
+                {
+                    rowsToCheckExistInDB.Add(date);
+                }
+            }
+
+            var existingRows = await _stockHistoryRepository.GetStockByDates(stockId, rowsToCheckExistInDB);
+
+            foreach (var stP in existingRows)
+            {
+                var key = _cacheHelperService.GetCacheKey(EnumCacheType.StockByDateToDB, $"{stockId}_{stP.DateTime.ToString("yyyy-MM-dd")}");
+
+                if (!_memoryCache.TryGetValue(key, out StockParams stockParams))
+                {
+                    _memoryCache.Set(key, stP);
+                }
+            }
+
+
+            foreach (var date in dates)
+            {
+                var key = _cacheHelperService.GetCacheKey(EnumCacheType.StockByDateToDB, $"{stockId}_{date.ToString("yyyy-MM-dd")}");
+
+                if (_memoryCache.TryGetValue(key, out StockParams stockParams))
+                {
+                    result.Add(stockParams);
+                }
+            }
+
+            return result;
         }
     }
 }
