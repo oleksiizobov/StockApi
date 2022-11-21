@@ -35,8 +35,8 @@ namespace StockTestAPI.Services
 
             var stockHistoryData = await _stockHistoryProxyRepository.GetStockByDates(stockId, lastDaysCount);
             var existingMainHistoryData = await _stockHistoryProxyRepository.GetStockByDates(_mainStockId, lastDaysCount);
-
-            if (stockHistoryData.Count != lastDaysCount)
+            //lastDaysCount-2 - small condition according to tz
+            if (stockHistoryData.Count != lastDaysCount-2)
             {
                 stockHistoryData = await _stockApiClientService.GetStockPriceByDate(stockId, lastDaysCount);
                 await _stockHistoryProxyRepository.AddStockHistory(stockId, stockHistoryData);
